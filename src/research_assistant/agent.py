@@ -1,12 +1,13 @@
 """
-Step 2 - Agent + calculator tool.
-Verifies multi-step reasoning and correct tool selection.
+Step 3 - Agent + calculator + web search tools.
+Verifies correct tool selection across math vs factual/current questions.
 """
 import os
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 
 from research_assistant.tools.calculator import calculator
+from research_assistant.tools.web_search import web_search
 
 
 def build_agent() -> Agent:
@@ -15,14 +16,19 @@ def build_agent() -> Agent:
     return Agent(
         model=LiteLlm(model=model_id),
         name="research_assistant_v1",
-        description="Research agent - step 2: reasoning + calculator tool",
+        description="Research agent - step 3: reasoning + calculator + web search",
         instruction=(
-            "You are a research assistant. Answer questions directly and "
-            "concisely. Use the calculator tool for any arithmetic or math "
-            "expression instead of computing it yourself - it is more "
-            "reliable. Do not use the calculator for non-math questions."
+            "You are a research assistant with two tools:\n"
+            "- calculator: use for any arithmetic or math expression.\n"
+            "- web_search: use for current events, facts about specific "
+            "entities, prices, or anything you cannot be certain about "
+            "from reasoning alone.\n"
+            "Do not use a tool when you can answer directly and reliably "
+            "from general knowledge (e.g. well-known static facts). "
+            "Never use calculator for non-math questions or web_search for "
+            "simple arithmetic."
         ),
-        tools=[calculator],
+        tools=[calculator, web_search],
     )
 
 

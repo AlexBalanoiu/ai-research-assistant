@@ -7,4 +7,7 @@ src/ai_research_assistant.egg-info/top_level.txt
 src/research_assistant/__init__.py
 src/research_assistant/agent.py
 src/research_assistant/runner.py
+src/research_assistant/tools/__init__.py
+src/research_assistant/tools/calculator.py
 tests/test_step1_no_tools.py
+tests/test_step2_calculator.py
