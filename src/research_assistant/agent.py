@@ -3,11 +3,14 @@ Step 3 - Agent + calculator + web search tools.
 Verifies correct tool selection across math vs factual/current questions.
 """
 import os
+from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 
 from research_assistant.tools.calculator import calculator
 from research_assistant.tools.web_search import web_search
+
+load_dotenv()
 
 
 def build_agent() -> Agent:
