@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: ai-research-assistant
+Version: 0.1.0
+Summary: Agent de cercetare autonom — Agentic AI Systems
+Requires-Python: >=3.11
+Requires-Dist: google-adk>=1.36.2
+Requires-Dist: litellm>=1.84
+Requires-Dist: python-dotenv>=1.0.1
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24; extra == "dev"
