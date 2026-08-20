@@ -1,9 +1,13 @@
 """
-Step 2 - Calculator tool.
+Calculator tool. Enforces the shared tool-call budget (see budget.py).
 Safely evaluates arithmetic expressions (no raw eval/exec on strings).
 """
 import ast
 import operator
+
+from google.adk.tools import ToolContext
+
+from research_assistant.tools.budget import check_and_consume, MAX_TOOL_CALLS_PER_TURN
 
 _ALLOWED_OPERATORS = {
     ast.Add: operator.add,
@@ -29,7 +33,7 @@ def _eval_node(node):
     raise ValueError("Unsupported expression")
 
 
-def calculator(expression: str) -> dict:
+def calculator(expression: str, tool_context: ToolContext) -> dict:
     """Evaluates a math expression and returns the numeric result.
 
     Supports +, -, *, /, %, ** and parentheses. Use this tool whenever the
@@ -37,10 +41,16 @@ def calculator(expression: str) -> dict:
 
     Args:
         expression: A math expression as a string, e.g. "12 + 30 * 2".
+        tool_context: Injected automatically by ADK - session state access.
 
     Returns:
         A dict: {"result": <number>} on success, {"error": <message>} on failure.
     """
+    if not check_and_consume(tool_context):
+        return {
+            "error": f"Tool call budget exceeded (max {MAX_TOOL_CALLS_PER_TURN} "
+            "tool calls per question). Answer using what you already know instead."
+        }
     try:
         tree = ast.parse(expression, mode="eval")
         return {"result": _eval_node(tree.body)}

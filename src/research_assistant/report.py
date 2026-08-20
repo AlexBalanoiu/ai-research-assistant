@@ -1,23 +1,34 @@
 """
-Step 5 - Markdown report generator.
-Structure: question -> sources -> synthesis -> conclusion.
+Markdown report generator.
+Structure: question -> confidence -> sources -> synthesis -> conclusion.
 
 Sources are extracted programmatically from actual web_search tool
 results (not trusted from the LLM's prose, to avoid hallucinated URLs).
+Confidence is computed deterministically from the number of distinct
+sources found (not self-reported by the LLM - more reliable/testable).
 Synthesis/Conclusion are parsed from the agent's final answer, which is
 instructed (see agent.py) to mark them with "### Synthesis" / "### Conclusion".
 """
 import re
 
+_CONFIDENCE_LEVELS = [
+    (0, "Not verified (answered from model knowledge only, no sources checked)"),
+    (1, "Low (single source)"),
+    (2, "Medium (2 sources)"),
+    (3, "High (3+ sources)"),
+]
+
 
 def build_report(question: str, answer: str, tool_results: list[dict]) -> str:
-    sources = _extract_sources(tool_results)
-    synthesis, conclusion = _split_answer(answer)
+    sources = extract_sources(tool_results)
+    synthesis, conclusion = split_answer(answer)
+    confidence = compute_confidence(sources)
 
     lines = [
         "# Research Report",
         "",
         f"**Question:** {question}",
+        f"**Confidence:** {confidence}",
         "",
         "## Sources",
     ]
@@ -37,7 +48,7 @@ def build_report(question: str, answer: str, tool_results: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _extract_sources(tool_results: list[dict]) -> list[dict]:
+def extract_sources(tool_results: list[dict]) -> list[dict]:
     sources = []
     seen_urls = set()
     for result in tool_results:
@@ -49,7 +60,15 @@ def _extract_sources(tool_results: list[dict]) -> list[dict]:
     return sources
 
 
-def _split_answer(answer: str) -> tuple[str, str]:
+def compute_confidence(sources: list[dict]) -> str:
+    count = len(sources)
+    for threshold, label in reversed(_CONFIDENCE_LEVELS):
+        if count >= threshold:
+            return label
+    return _CONFIDENCE_LEVELS[0][1]
+
+
+def split_answer(answer: str) -> tuple[str, str]:
     synthesis_match = re.search(
         r"###\s*Synthesis\s*(.*?)(?=###\s*Conclusion|\Z)", answer, re.S | re.I
     )
@@ -58,6 +77,4 @@ def _split_answer(answer: str) -> tuple[str, str]:
     if synthesis_match and conclusion_match:
         return synthesis_match.group(1).strip(), conclusion_match.group(1).strip()
 
-    # Fallback: agent didn't use the markers (e.g. trivial question) -
-    # treat the whole answer as the synthesis.
     return answer.strip(), "(no explicit conclusion provided)"

@@ -56,12 +56,12 @@ def test_report_notes_when_no_sources_used():
 # --- Functional test (requires model configured) ---
 
 async def test_generate_report_end_to_end_for_research_question():
-    """Uses a question that requires current/factual lookup, not a static fact
-    the model can answer confidently from general knowledge (see step3 tests -
-    this exact question reliably triggers web_search)."""
-    report = await generate_report("Who is the current CEO of Microsoft?")
+    """Uses a genuinely dynamic fact (stock price) that no model can know
+    confidently without searching - avoids the flakiness of 'well-known
+    but technically current' facts like long-tenured CEOs."""
+    report = await generate_report("What is the current stock price of Apple (AAPL)?")
     assert report.startswith("# Research Report")
     assert "## Sources" in report
     assert "## Synthesis" in report
     assert "## Conclusion" in report
-    assert "https://" in report  # at least one real source URL
+    assert "https://" in report

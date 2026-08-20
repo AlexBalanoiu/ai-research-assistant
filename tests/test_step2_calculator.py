@@ -5,14 +5,16 @@ Run: pytest tests/test_step2_calculator.py -v
 """
 from research_assistant.tools.calculator import calculator
 from research_assistant.runner import ask_with_trace
+from tests.fakes import FakeToolContext
 
 
 # --- Unit test (fast, no LLM needed) ---
 
 def test_calculator_pure_function():
-    assert calculator("2 + 2") == {"result": 4}
-    assert calculator("10 / 4") == {"result": 2.5}
-    assert "error" in calculator("import os")  # not a valid arithmetic expr
+    ctx = FakeToolContext()
+    assert calculator("2 + 2", ctx) == {"result": 4}
+    assert calculator("10 / 4", ctx) == {"result": 2.5}
+    assert "error" in calculator("import os", ctx)
 
 
 # --- Functional tests (require Ollama running) ---

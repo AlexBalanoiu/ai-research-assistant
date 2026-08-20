@@ -1,7 +1,4 @@
-"""
-Step 4 - Search cache backed by ADK session state (tool_context.state).
-Prevents repeating an identical web search within the same session.
-"""
+
 
 CACHE_PREFIX = "search_cache:"
 
