@@ -1,13 +1,26 @@
 """
 Helpers for running the agent outside the ADK CLI/web UI (scripts, tests).
 """
+import asyncio
+import re
 import uuid
+
+from litellm.exceptions import RateLimitError
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Content, Part
 
 from research_assistant.agent import root_agent
+from research_assistant.report import build_report
 
 APP_NAME = "research_assistant"
+_MAX_RETRIES = 2
+_DEFAULT_RETRY_DELAY = 20.0
+
+
+def _extract_retry_delay(error_message: str) -> float:
+    """Parses "Please retry in 45.7s" out of the Gemini 429 error message."""
+    match = re.search(r"retry in ([\d.]+)s", error_message)
+    return float(match.group(1)) + 1.0 if match else _DEFAULT_RETRY_DELAY
 
 
 class AgentSession:
@@ -27,7 +40,18 @@ class AgentSession:
             self._created = True
 
     async def send(self, question: str) -> tuple[str, list[str], list[dict]]:
-        """Sends one turn. Returns (final_text, tool_names_called, tool_results)."""
+        """Sends one turn, retrying on rate limits. Returns (final_text, tool_names_called, tool_results)."""
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                return await self._send_once(question)
+            except RateLimitError as exc:
+                if attempt == _MAX_RETRIES:
+                    raise
+                delay = _extract_retry_delay(str(exc))
+                print(f"[rate limit] waiting {delay:.0f}s before retry ({attempt + 1}/{_MAX_RETRIES})...")
+                await asyncio.sleep(delay)
+
+    async def _send_once(self, question: str) -> tuple[str, list[str], list[dict]]:
         await self._ensure_session()
         content = Content(role="user", parts=[Part(text=question)])
         final_text = ""
@@ -59,3 +83,9 @@ async def ask_with_trace(question: str) -> tuple[str, list[str]]:
     """One-off question, fresh session. Returns (final_text, tool_names_called)."""
     text, tool_calls, _ = await AgentSession().send(question)
     return text, tool_calls
+
+
+async def generate_report(question: str) -> str:
+    """One-off question, fresh session. Returns a formatted markdown report."""
+    answer, _, tool_results = await AgentSession().send(question)
+    return build_report(question, answer, tool_results)
